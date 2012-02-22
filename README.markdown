@@ -1,7 +1,13 @@
 Usage
 =====
 
-Include keyHandler.js
+Include keyHandler.js in your document
+
+``` html
+  <script src="keyHandler.js"></script>
+```
+
+Watch for events.
 
 ``` javascript
 // Create a new instance of the key handler
