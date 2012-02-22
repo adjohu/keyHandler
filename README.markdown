@@ -1,7 +1,7 @@
 Usage
 =====
 
-```
+``` javascript
 // Create a new instance of the key handler
 keyHandler = new KeyHandler();
 
