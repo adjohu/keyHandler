@@ -1,4 +1,4 @@
-var KeyboardHandler = function(){
+var KeyHandler = function(){
   // Reference to the current object.
   // Simplest way to get around the scope issues with the key events
   var self = this;
@@ -17,10 +17,15 @@ var KeyboardHandler = function(){
    * Class to create a new instance of a listener
    * Should be called with new
    */
-  this.Listener = function(keys, callback){
+  this.Listener = function(keys, callback, callbackParams){
     // Keys should be uppercase and sorted
     this.keys = keys.sort().join(',').toUpperCase().split(',');
     this.callback = callback;
+    this.callbackParams = callbackParams || [];
+
+    this.run = function(){
+      return this.callback.apply(null, this.callbackParams);
+    };
   };
   
 
@@ -50,7 +55,7 @@ var KeyboardHandler = function(){
    * @callback function(idx, keyName)
    */
   this.handleKeyEvent = function(e, callback){
-    console.log(e);
+    //console.log(e);
     var keyCode = e.keyCode;
     var keyName = self.keyMap[keyCode];
     var idx = self.currentKeys.indexOf( keyName );
@@ -64,9 +69,21 @@ var KeyboardHandler = function(){
    * These add and remove keys from currentKeys array
    */
   this.addKey = function(keyName){
-    if( keyName == 'CAPS_LOCK') return; // Fuck capslock
+    if( keyName == 'CAPS_LOCK' ) return; // Fuck capslock
 
     self.currentKeys.push( keyName );
+  };
+
+  this.removeKey = function(keyName){
+    // Meta is a system key in osx and stops firing of keyup
+    // for any other keys that are down at the same time.
+    if( keyName == 'META' ){
+      self.currentKeys = [];
+      return false;
+    }
+
+    var idx = self.currentKeys.indexOf( keyName );
+    self.currentKeys.splice( idx, 1 );
   };
 
   this.keyDown = function(e){
@@ -76,7 +93,7 @@ var KeyboardHandler = function(){
       }
     });
 
-    console.log(self.currentKeys);
+    //console.log(self.currentKeys);
     return self.runListenersMatchingCurrentKeys();
   };
 
@@ -86,21 +103,15 @@ var KeyboardHandler = function(){
 
     self.handleKeyEvent(e, function(idx){
       if( idx > -1 ){
-        self.currentKeys.splice( idx, 1 );
+        self.removeKey( keyName );
       }
     });
 
-    console.log(self.currentKeys);
+    //console.log(self.currentKeys);
   };
 
 
 
-  /* 
-   * Run a listener
-   */
-  this.runListener = function(listener){
-    return listener.callback();
-  }
 
   /*
    * Find any listeners that match the passed keys
@@ -137,7 +148,7 @@ var KeyboardHandler = function(){
 
     for( var i=0; i<listeners.length; i++){
       var listener = listeners[i];
-      if( this.runListener( listener ) == false ) continuePropagation = false; 
+      if( listener.run() == false ) continuePropagation = false; 
     }
 
     return continuePropagation;
@@ -148,37 +159,47 @@ var KeyboardHandler = function(){
    * Add a listener function to call if keys down match 
    * @any string parameter - key name
    * @function parameter - called when all keys specified are down.
+   * @any parameter passed after function - param to be passed to function
    *  return false to stop propagation
    */
   this.registerListener = function(){
     var keys = [];
     var callback;
+    var callbackParams = [];
 
+    var argIsKeyName = true;
     for( var i=0; i<arguments.length; i++ ){
       arg = arguments[i];
       switch( typeof arg ){
-        case 'string':
-          keys.push( arg );
-          break;
-
         case 'function':
           callback = arg; 
+          
+          argIsKeyName = false;
           break;
+
+        default:
+          if( argIsKeyName ){
+            keys.push( arg );
+          }else{
+            callbackParams.push( arg ); 
+          }
+          break;
+
       }
     }
 
     if( keys.length > 0 && typeof callback === 'function' ){
-      var listener = new this.Listener(keys, callback);
+      var listener = new this.Listener(keys, callback, callbackParams);
       this.listeners.push( listener );
     }
   };
 
   this.unregisterListener = function(){
     var matchingListeners = this.findMatchingListeners.apply(this, arguments);
-    console.log( matchingListeners );
+    //console.log( matchingListeners );
     for( var i=0; i<matchingListeners.length; i++ ){
       var matchingListener = matchingListeners[i];
-      console.log( this.listeners.indexOf(matchingListener) );
+      //console.log( this.listeners.indexOf(matchingListener) );
       this.listeners.splice( this.listeners.indexOf(matchingListener), 1);
     }
   }
@@ -186,3 +207,4 @@ var KeyboardHandler = function(){
 
   this.init();
 };
+
